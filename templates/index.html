@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Solar Panel Spacing Calculator</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    #map { height: 360px; width: 100%; margin-bottom: 10px; }
+    label { display: block; margin: 6px 0; }
+    form { max-width: 720px; }
+    button { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Solar Panel Spacing Calculator</h1>
+
+  <div id="map"></div>
+
+  <form id="form">
+    <label>Latitude:
+      <input type="number" step="any" id="latitude" required />
+    </label>
+
+    <label>Longitude:
+      <input type="number" step="any" id="longitude" required />
+    </label>
+
+    <label>Panel Slope Length (m):
+      <input type="number" step="any" id="panel_length" required />
+    </label>
+
+    <label>Panel Tilt Angle (° from horizontal):
+      <input type="number" step="any" id="tilt" value="30" required />
+    </label>
+
+    <label>Panel Azimuth (° from North, 180 = South):
+      <input type="number" step="any" id="azimuth" value="180" required />
+    </label>
+
+    <label>Time:
+      <input type="time" id="time" value="09:00" />
+      or <label><input type="checkbox" id="solarNoon" /> Solar Noon</label>
+    </label>
+
+    <label>Time Zone:
+      <select id="timezone">
+        <!-- US -->
+        <option value="America/New_York">Eastern (US)</option>
+        <option value="America/Chicago">Central (US)</option>
+        <option value="America/Denver">Mountain (US)</option>
+        <option value="America/Los_Angeles">Pacific (US)</option>
+        <!-- Europe major -->
+        <option value="Europe/London">London</option>
+        <option value="Europe/Paris">Paris</option>
+        <option value="Europe/Berlin">Berlin</option>
+        <option value="Europe/Rome">Rome</option>
+        <option value="Europe/Madrid">Madrid</option>
+        <option value="Europe/Amsterdam">Amsterdam</option>
+        <option value="Europe/Zurich">Zurich</option>
+        <option value="Europe/Stockholm">Stockholm</option>
+        <option value="Europe/Helsinki">Helsinki</option>
+        <!-- Manila -->
+        <option value="Asia/Manila">Manila</option>
+      </select>
+    </label>
+
+    <label>Shading % on rear panel height allowed:
+      <input type="number" id="shading" value="25" step="5" min="0" max="100" /> %
+    </label>
+
+    <button type="submit">Calculate</button>
+  </form>
+
+  <div id="result"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+    defer
+  ></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize Leaflet map
+      const map = L.map("map");
+      map.setView([42, -71], 5);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+
+      // Ensure proper sizing if layout reflows
+      setTimeout(() => map.invalidateSize(), 0);
+
+      let marker = null;
+      map.on("click", function (e) {
+        const { lat, lng } = e.latlng;
+        document.getElementById("latitude").value = lat.toFixed(6);
+        document.getElementById("longitude").value = lng.toFixed(6);
+        if (marker) marker.remove();
+        marker = L.marker([lat, lng]).addTo(map);
+      });
+
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+
+        const time = document.getElementById("solarNoon").checked
+          ? "solar"
+          : document.getElementById("time").value;
+
+        const data = {
+          latitude: document.getElementById("latitude").value,
+          longitude: document.getElementById("longitude").value,
+          panel_length: document.getElementById("panel_length").value,
+          tilt: document.getElementById("tilt").value,
+          azimuth: document.getElementById("azimuth").value,
+          shading: document.getElementById("shading").value / 100,
+          time: time,
+          timezone: document.getElementById("timezone").value,
+        };
+
+        const resp = await fetch("/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await resp.json();
+
+        document.getElementById("result").innerHTML = result.error
+          ? `<p style="color:red">${result.error}</p>`
+          : `<p><b>${result.timestamp}</b><br>
+               Solar elevation: <b>${result.solar_elevation}°</b><br>
+               Solar azimuth: <b>${result.solar_azimuth}°</b><br>
+               Back-to-front spacing: <b>${result.back_to_front} m</b><br>
+               Front-to-front spacing: <b>${result.front_to_front} m</b><br>
+               <i>${result.shading_note}</i></p>`;
+      };
+    });
+  </script>
+</body>
+</html>
