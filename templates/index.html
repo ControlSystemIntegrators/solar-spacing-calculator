@@ -199,6 +199,42 @@
       line-height: 1.55;
     }
 
+    /* Radio groups */
+    .radio-group {
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      padding: 0.45rem 0;
+      flex-wrap: wrap;
+    }
+    .radio-group label {
+      font-size: 0.92rem;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      margin: 0;
+    }
+    .radio-group input[type="radio"] { cursor: pointer; }
+
+    /* Derived dimensions display */
+    .derived-display {
+      background: #f0f4fa;
+      border: 1px solid #c5cdd8;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .derived-display .derived-item { display: flex; flex-direction: column; }
+    .derived-display .derived-label { font-size: 0.78rem; color: #777; margin-bottom: 0.1rem; }
+    .derived-display .derived-value { font-weight: 700; font-size: 1rem; }
+
     /* Result */
     #result {
       max-width: 740px;
@@ -297,49 +333,98 @@
     <div class="step">
       <div class="step-header">
         <div class="step-number">2</div>
-        <h2 class="step-title">Panel or Array Dimensions</h2>
+        <h2 class="step-title">Panel &amp; Array Dimensions</h2>
       </div>
       <p class="step-desc">
-        The physical size and tilt of your panels determine how long a shadow each row casts onto
-        the row behind it. Enter the dimensions of a <strong>single panel</strong> if calculating
-        spacing between individual panel rows, or the <strong>combined array height</strong> if
-        multiple panel rows are mounted together as a single block.
+        The physical size of your panels and how many are stacked in each row determines the
+        height of the shadow cast onto the row behind. Enter the panel's face dimensions,
+        choose its mounting orientation, and specify how many panels make up one array block.
       </p>
 
-      <div class="panel-diagram">
-        <strong>Slope length</strong> is measured along the face of the panel — not the horizontal
-        ground distance. For a standard 60-cell panel this is typically around 1.65 m; for a 72-cell
-        panel around 1.96 m. If your array stacks two portrait panels high, double the single-panel
-        slope length.
-        <pre>
-         ___slope length___
-        /                  \   ← panel face (tilted)
-       /    tilt angle       \
-      /________________________\
-      |← ground projection →|
-        </pre>
-      </div>
-
+      <!-- Unit selector -->
       <div class="field-row">
         <div class="field-group">
-          <label for="panel_length">Slope Length (m)</label>
-          <input type="number" step="any" id="panel_length" placeholder="e.g. 1.65" required />
-          <span class="field-hint">Measured along the panel face, not the ground</span>
+          <label>Dimension Units</label>
+          <div class="radio-group">
+            <label><input type="radio" name="dim_unit" value="mm" checked> mm</label>
+            <label><input type="radio" name="dim_unit" value="in"> inches</label>
+          </div>
         </div>
+      </div>
+
+      <!-- Panel face dimensions -->
+      <div class="field-row">
+        <div class="field-group">
+          <label for="panel_dim_w">Panel Width <span class="dim-unit-label">(mm)</span></label>
+          <input type="number" step="any" id="panel_dim_w" placeholder="e.g. 1000" required />
+          <span class="field-hint">Shorter side of the panel as it leaves the factory</span>
+        </div>
+        <div class="field-group">
+          <label for="panel_dim_h">Panel Height <span class="dim-unit-label">(mm)</span></label>
+          <input type="number" step="any" id="panel_dim_h" placeholder="e.g. 1722" required />
+          <span class="field-hint">Longer side of the panel as it leaves the factory</span>
+        </div>
+      </div>
+
+      <!-- Orientation -->
+      <div class="field-row">
+        <div class="field-group">
+          <label>Mounting Orientation</label>
+          <div class="radio-group">
+            <label><input type="radio" name="orientation" value="portrait" checked>
+              Portrait — panel height runs up the slope</label>
+            <label><input type="radio" name="orientation" value="landscape">
+              Landscape — panel width runs up the slope</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Array block size -->
+      <div class="field-row">
+        <div class="field-group">
+          <label for="array_cols">Array Columns <span style="font-weight:400;color:#777;">(across the row)</span></label>
+          <input type="number" step="1" min="1" id="array_cols" value="1" required />
+          <span class="field-hint">Panels side-by-side in the horizontal direction</span>
+        </div>
+        <div class="field-group">
+          <label for="array_rows">Array Rows <span style="font-weight:400;color:#777;">(stacked up the slope)</span></label>
+          <input type="number" step="1" min="1" id="array_rows" value="1" required />
+          <span class="field-hint">Panels stacked vertically up the slope face</span>
+        </div>
+      </div>
+
+      <!-- Derived: slope length + array width (read-only, updated by JS) -->
+      <div class="derived-display" id="derived_dims">
+        <div class="derived-item">
+          <span class="derived-label">Slope Length (shadow height)</span>
+          <span class="derived-value" id="derived_slope">—</span>
+        </div>
+        <div class="derived-item">
+          <span class="derived-label">Array Width</span>
+          <span class="derived-value" id="derived_width">—</span>
+        </div>
+        <div class="derived-item">
+          <span class="derived-label">Panel across-row dim (for land calc)</span>
+          <span class="derived-value" id="derived_across">—</span>
+        </div>
+      </div>
+
+      <!-- Tilt / azimuth / shading -->
+      <div class="field-row" style="margin-top:1rem;">
         <div class="field-group">
           <label for="tilt">Tilt Angle (° from horizontal)</label>
           <input type="number" step="any" id="tilt" value="30" required />
           <span class="field-hint">0° = flat, 90° = vertical. Typical fixed-tilt: 15°–35°</span>
         </div>
-      </div>
-
-      <div class="field-row">
         <div class="field-group">
           <label for="azimuth">Array Azimuth (° from North)</label>
           <input type="number" step="any" id="azimuth" value="180" required />
           <span class="field-hint">180° = facing South (typical in Northern Hemisphere)</span>
         </div>
-        <div class="field-group">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group" style="max-width:280px;">
           <label for="shading">Allowable Shading on Rear Panel</label>
           <input type="number" id="shading" value="25" step="5" min="0" max="100" /> %
           <span class="field-hint">0% = no shading ever. 25% is a common design tolerance.</span>
@@ -435,13 +520,71 @@
         marker = L.marker([lat, lng]).addTo(map);
       });
 
+      // ── Derived dimension calculator ──────────────────────────────────────
+      // Returns { slopeLengthM, arrayWidthM, acrossM } or null if inputs incomplete.
+      function calcDims() {
+        const dimW   = parseFloat(document.getElementById("panel_dim_w").value);
+        const dimH   = parseFloat(document.getElementById("panel_dim_h").value);
+        const unit   = document.querySelector('input[name="dim_unit"]:checked').value;
+        const orient = document.querySelector('input[name="orientation"]:checked').value;
+        const cols   = parseInt(document.getElementById("array_cols").value) || 1;
+        const rows   = parseInt(document.getElementById("array_rows").value) || 1;
+
+        if (!dimW || !dimH) return null;
+
+        // Convert to metres
+        const factor = unit === "mm" ? 0.001 : 0.0254;
+        const wM = dimW * factor;
+        const hM = dimH * factor;
+
+        // In portrait: height runs up the slope; in landscape: width runs up
+        const slopePerPanel = orient === "portrait" ? hM : wM;
+        const acrossPerPanel = orient === "portrait" ? wM : hM;
+
+        return {
+          slopeLengthM: slopePerPanel * rows,
+          arrayWidthM:  acrossPerPanel * cols,
+          acrossM:      acrossPerPanel,   // single-panel across dim for land calc
+        };
+      }
+
+      function updateDerivedDisplay() {
+        const d = calcDims();
+        const fmt = m => m != null ? m.toFixed(3) + " m" : "—";
+        document.getElementById("derived_slope").textContent  = d ? fmt(d.slopeLengthM) : "—";
+        document.getElementById("derived_width").textContent  = d ? fmt(d.arrayWidthM)  : "—";
+        document.getElementById("derived_across").textContent = d ? fmt(d.acrossM)       : "—";
+        // Auto-populate Step 3 panel width
+        if (d) document.getElementById("panel_width").value = d.acrossM.toFixed(4);
+      }
+
+      // Update unit labels on radio change
+      document.querySelectorAll('input[name="dim_unit"]').forEach(r =>
+        r.addEventListener("change", () => {
+          const lbl = r.value === "mm" ? "(mm)" : "(in)";
+          document.querySelectorAll(".dim-unit-label").forEach(el => el.textContent = lbl);
+          updateDerivedDisplay();
+        })
+      );
+
+      // Recalculate whenever any dimension input changes
+      ["panel_dim_w","panel_dim_h","array_cols","array_rows"].forEach(id =>
+        document.getElementById(id).addEventListener("input", updateDerivedDisplay)
+      );
+      document.querySelectorAll('input[name="orientation"]').forEach(r =>
+        r.addEventListener("change", updateDerivedDisplay)
+      );
+
       // ── Optimise button ───────────────────────────────────────────────────
       document.getElementById("btnOptimize").addEventListener("click", async () => {
-        const required = ["latitude","longitude","panel_length","tilt","azimuth",
-                          "panel_wp","panel_width","panel_cost","land_cost_m2"];
+        const dims = calcDims();
+        if (!dims) { alert("Please complete the panel dimensions in Step 2 first."); return; }
+
+        const required = ["latitude","longitude","tilt","azimuth",
+                          "panel_wp","panel_cost","land_cost_m2"];
         for (const id of required) {
           if (!document.getElementById(id).value) {
-            alert(`Please fill in "${document.getElementById(id).closest(".field-group")?.querySelector("label")?.textContent?.trim() || id}" before optimising.`);
+            alert(`Please fill in the "${id}" field before optimising.`);
             return;
           }
         }
@@ -452,13 +595,13 @@
         const payload = {
           latitude:     document.getElementById("latitude").value,
           longitude:    document.getElementById("longitude").value,
-          panel_length: document.getElementById("panel_length").value,
+          panel_length: dims.slopeLengthM,
           tilt:         document.getElementById("tilt").value,
           azimuth:      document.getElementById("azimuth").value,
           time,
           timezone:     document.getElementById("timezone").value,
           panel_wp:     document.getElementById("panel_wp").value,
-          panel_width:  document.getElementById("panel_width").value,
+          panel_width:  dims.acrossM,
           panel_cost:   document.getElementById("panel_cost").value,
           land_cost_m2: document.getElementById("land_cost_m2").value,
           n_bypass:     document.getElementById("n_bypass").value,
@@ -586,6 +729,12 @@
       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
 
+        const dims = calcDims();
+        if (!dims) {
+          alert("Please complete the panel dimensions in Step 2 first.");
+          return;
+        }
+
         const time = document.getElementById("solarNoon").checked
           ? "solar"
           : document.getElementById("time").value;
@@ -593,10 +742,10 @@
         const data = {
           latitude:     document.getElementById("latitude").value,
           longitude:    document.getElementById("longitude").value,
-          panel_length: document.getElementById("panel_length").value,
+          panel_length: dims.slopeLengthM,
           tilt:         document.getElementById("tilt").value,
           azimuth:      document.getElementById("azimuth").value,
-          shading:      document.getElementById("shading").value / 100,
+          shading:      parseFloat(document.getElementById("shading").value) / 100,
           time:         time,
           timezone:     document.getElementById("timezone").value,
         };
