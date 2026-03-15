@@ -12,93 +12,288 @@
   />
 
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    #map { height: 360px; width: 100%; margin-bottom: 10px; }
-    label { display: block; margin: 6px 0; }
-    form { max-width: 720px; }
-    button { margin-top: 8px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: #f5f7fa; color: #1a1a2e; }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle { color: #555; margin-top: 0; margin-bottom: 2rem; font-size: 1rem; }
+
+    form { max-width: 740px; }
+
+    /* Step card */
+    .step {
+      background: #fff;
+      border: 1px solid #dde3ed;
+      border-radius: 8px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .step-number {
+      background: #1a73e8;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-title { font-size: 1.15rem; font-weight: 700; margin: 0; }
+    .step-desc {
+      color: #555;
+      font-size: 0.93rem;
+      line-height: 1.55;
+      margin: 0 0 1.1rem 0;
+      padding-left: 2.75rem;   /* align under title text */
+    }
+
+    /* Map */
+    #map { height: 340px; width: 100%; border-radius: 6px; margin-bottom: 0.75rem; }
+    .map-hint { font-size: 0.85rem; color: #777; margin-bottom: 1rem; }
+
+    /* Fields */
+    .field-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.6rem;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 180px;
+    }
+    .field-group label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: #333;
+    }
+    .field-group input,
+    .field-group select {
+      padding: 0.45rem 0.6rem;
+      border: 1px solid #c5cdd8;
+      border-radius: 5px;
+      font-size: 0.95rem;
+    }
+    .field-hint {
+      font-size: 0.8rem;
+      color: #777;
+      margin-top: 0.25rem;
+    }
+
+    /* Panel diagram */
+    .panel-diagram {
+      background: #f0f4fa;
+      border: 1px solid #dde3ed;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      color: #444;
+    }
+    .panel-diagram pre {
+      font-family: monospace;
+      font-size: 0.82rem;
+      margin: 0.5rem 0 0;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    /* Time row */
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.6rem;
+    }
+    .time-row input[type="time"] { padding: 0.45rem 0.6rem; border: 1px solid #c5cdd8; border-radius: 5px; font-size: 0.95rem; }
+    .time-row label { font-size: 0.88rem; font-weight: 600; color: #333; display: flex; align-items: center; gap: 0.4rem; }
+    .or-divider { color: #aaa; font-size: 0.85rem; }
+
+    /* Calculate button */
+    .btn-calc {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    .btn-calc:hover { background: #1558b0; }
+
+    /* Result */
+    #result {
+      max-width: 740px;
+      margin-top: 1.5rem;
+    }
+    .result-card {
+      background: #fff;
+      border: 1px solid #dde3ed;
+      border-radius: 8px;
+      padding: 1.5rem 1.75rem;
+    }
+    .result-card h2 { margin-top: 0; font-size: 1.05rem; color: #1a73e8; }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.95rem;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row span:last-child { font-weight: 700; }
+    .result-note { color: #777; font-size: 0.85rem; margin-top: 0.75rem; }
+    .error-msg { color: #c0392b; font-weight: 600; }
   </style>
 </head>
 <body>
   <h1>Solar Panel Spacing Calculator</h1>
-
-  <div id="map"></div>
+  <p class="subtitle">Calculate minimum inter-row spacing to control self-shading on your solar array.</p>
 
   <form id="form">
-    <label>Latitude:
-      <input type="number" step="any" id="latitude" required />
-    </label>
 
-    <label>Longitude:
-      <input type="number" step="any" id="longitude" required />
-    </label>
+    <!-- ── Step 1: Site Location ──────────────────────────────────────────── -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <h2 class="step-title">Site Location</h2>
+      </div>
+      <p class="step-desc">
+        Your site's latitude and longitude are used to calculate the sun's path across the sky
+        throughout the year. The calculator uses the <strong>winter solstice (December 21)</strong>
+        — the day the sun is lowest in the sky and shadows are longest — to give you the
+        worst-case spacing requirement.
+        <br><br>
+        <strong>Click anywhere on the map</strong> to set your location, or type the coordinates directly.
+      </p>
 
-    <label>Panel Slope Length (m):
-      <input type="number" step="any" id="panel_length" required />
-    </label>
+      <div id="map"></div>
+      <p class="map-hint">&#128205; Click the map to place a pin — latitude and longitude will fill in automatically.</p>
 
-    <label>Panel Tilt Angle (° from horizontal):
-      <input type="number" step="any" id="tilt" value="30" required />
-    </label>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="latitude">Latitude</label>
+          <input type="number" step="any" id="latitude" placeholder="e.g. 42.3601" required />
+          <span class="field-hint">Positive = North, negative = South</span>
+        </div>
+        <div class="field-group">
+          <label for="longitude">Longitude</label>
+          <input type="number" step="any" id="longitude" placeholder="e.g. -71.0589" required />
+          <span class="field-hint">Positive = East, negative = West</span>
+        </div>
+      </div>
 
-    <label>Panel Azimuth (° from North, 180 = South):
-      <input type="number" step="any" id="azimuth" value="180" required />
-    </label>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="timezone">Time Zone</label>
+          <select id="timezone">
+            <option value="America/New_York">Eastern (US)</option>
+            <option value="America/Chicago">Central (US)</option>
+            <option value="America/Denver">Mountain (US)</option>
+            <option value="America/Los_Angeles">Pacific (US)</option>
+            <option value="Europe/London">London</option>
+            <option value="Europe/Paris">Paris</option>
+            <option value="Europe/Berlin">Berlin</option>
+            <option value="Europe/Rome">Rome</option>
+            <option value="Europe/Madrid">Madrid</option>
+            <option value="Europe/Amsterdam">Amsterdam</option>
+            <option value="Europe/Zurich">Zurich</option>
+            <option value="Europe/Stockholm">Stockholm</option>
+            <option value="Europe/Helsinki">Helsinki</option>
+            <option value="Asia/Manila">Manila</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Calculation Time</label>
+          <div class="time-row">
+            <input type="time" id="time" value="09:00" />
+            <span class="or-divider">or</span>
+            <label><input type="checkbox" id="solarNoon" /> Use Solar Noon</label>
+          </div>
+          <span class="field-hint">Solar noon gives the shortest shadow of the day. Use a specific time to check morning or afternoon conditions.</span>
+        </div>
+      </div>
+    </div>
 
-    <label>Time:
-      <input type="time" id="time" value="09:00" />
-      or <label><input type="checkbox" id="solarNoon" /> Solar Noon</label>
-    </label>
+    <!-- ── Step 2: Panel / Array Dimensions ──────────────────────────────── -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <h2 class="step-title">Panel or Array Dimensions</h2>
+      </div>
+      <p class="step-desc">
+        The physical size and tilt of your panels determine how long a shadow each row casts onto
+        the row behind it. Enter the dimensions of a <strong>single panel</strong> if calculating
+        spacing between individual panel rows, or the <strong>combined array height</strong> if
+        multiple panel rows are mounted together as a single block.
+      </p>
 
-    <label>Time Zone:
-      <select id="timezone">
-        <!-- US -->
-        <option value="America/New_York">Eastern (US)</option>
-        <option value="America/Chicago">Central (US)</option>
-        <option value="America/Denver">Mountain (US)</option>
-        <option value="America/Los_Angeles">Pacific (US)</option>
-        <!-- Europe major -->
-        <option value="Europe/London">London</option>
-        <option value="Europe/Paris">Paris</option>
-        <option value="Europe/Berlin">Berlin</option>
-        <option value="Europe/Rome">Rome</option>
-        <option value="Europe/Madrid">Madrid</option>
-        <option value="Europe/Amsterdam">Amsterdam</option>
-        <option value="Europe/Zurich">Zurich</option>
-        <option value="Europe/Stockholm">Stockholm</option>
-        <option value="Europe/Helsinki">Helsinki</option>
-        <!-- Manila -->
-        <option value="Asia/Manila">Manila</option>
-      </select>
-    </label>
+      <div class="panel-diagram">
+        <strong>Slope length</strong> is measured along the face of the panel — not the horizontal
+        ground distance. For a standard 60-cell panel this is typically around 1.65 m; for a 72-cell
+        panel around 1.96 m. If your array stacks two portrait panels high, double the single-panel
+        slope length.
+        <pre>
+         ___slope length___
+        /                  \   ← panel face (tilted)
+       /    tilt angle       \
+      /________________________\
+      |← ground projection →|
+        </pre>
+      </div>
 
-    <label>Shading % on rear panel height allowed:
-      <input type="number" id="shading" value="25" step="5" min="0" max="100" /> %
-    </label>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="panel_length">Slope Length (m)</label>
+          <input type="number" step="any" id="panel_length" placeholder="e.g. 1.65" required />
+          <span class="field-hint">Measured along the panel face, not the ground</span>
+        </div>
+        <div class="field-group">
+          <label for="tilt">Tilt Angle (° from horizontal)</label>
+          <input type="number" step="any" id="tilt" value="30" required />
+          <span class="field-hint">0° = flat, 90° = vertical. Typical fixed-tilt: 15°–35°</span>
+        </div>
+      </div>
 
-    <button type="submit">Calculate</button>
+      <div class="field-row">
+        <div class="field-group">
+          <label for="azimuth">Array Azimuth (° from North)</label>
+          <input type="number" step="any" id="azimuth" value="180" required />
+          <span class="field-hint">180° = facing South (typical in Northern Hemisphere)</span>
+        </div>
+        <div class="field-group">
+          <label for="shading">Allowable Shading on Rear Panel</label>
+          <input type="number" id="shading" value="25" step="5" min="0" max="100" /> %
+          <span class="field-hint">0% = no shading ever. 25% is a common design tolerance.</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-calc">Calculate Spacing</button>
   </form>
 
   <div id="result"></div>
 
   <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    crossorigin=""
-    defer
-  ></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize Leaflet map
       const map = L.map("map");
       map.setView([42, -71], 5);
-
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
-
-      // Ensure proper sizing if layout reflows
       setTimeout(() => map.invalidateSize(), 0);
 
       let marker = null;
@@ -118,14 +313,14 @@
           : document.getElementById("time").value;
 
         const data = {
-          latitude: document.getElementById("latitude").value,
-          longitude: document.getElementById("longitude").value,
+          latitude:     document.getElementById("latitude").value,
+          longitude:    document.getElementById("longitude").value,
           panel_length: document.getElementById("panel_length").value,
-          tilt: document.getElementById("tilt").value,
-          azimuth: document.getElementById("azimuth").value,
-          shading: document.getElementById("shading").value / 100,
-          time: time,
-          timezone: document.getElementById("timezone").value,
+          tilt:         document.getElementById("tilt").value,
+          azimuth:      document.getElementById("azimuth").value,
+          shading:      document.getElementById("shading").value / 100,
+          time:         time,
+          timezone:     document.getElementById("timezone").value,
         };
 
         const resp = await fetch("/calculate", {
@@ -137,13 +332,16 @@
         const result = await resp.json();
 
         document.getElementById("result").innerHTML = result.error
-          ? `<p style="color:red">${result.error}</p>`
-          : `<p><b>${result.timestamp}</b><br>
-               Solar elevation: <b>${result.solar_elevation}°</b><br>
-               Solar azimuth: <b>${result.solar_azimuth}°</b><br>
-               Back-to-front spacing: <b>${result.back_to_front} m</b><br>
-               Front-to-front spacing: <b>${result.front_to_front} m</b><br>
-               <i>${result.shading_note}</i></p>`;
+          ? `<div class="result-card"><p class="error-msg">&#9888; ${result.error}</p></div>`
+          : `<div class="result-card">
+               <h2>Results — Winter Solstice Worst Case</h2>
+               <div class="result-row"><span>Date &amp; Time</span><span>${result.timestamp}</span></div>
+               <div class="result-row"><span>Solar Elevation</span><span>${result.solar_elevation}°</span></div>
+               <div class="result-row"><span>Solar Azimuth</span><span>${result.solar_azimuth}°</span></div>
+               <div class="result-row"><span>Back-to-Front Spacing</span><span>${result.back_to_front} m</span></div>
+               <div class="result-row"><span>Front-to-Front Row Pitch</span><span>${result.front_to_front} m</span></div>
+               <p class="result-note">&#8505; ${result.shading_note}</p>
+             </div>`;
       };
     });
   </script>
