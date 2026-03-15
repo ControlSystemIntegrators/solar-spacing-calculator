@@ -318,13 +318,32 @@
           </select>
         </div>
         <div class="field-group">
-          <label>Calculation Time</label>
-          <div class="time-row">
-            <input type="time" id="time" value="09:00" />
-            <span class="or-divider">or</span>
-            <label><input type="checkbox" id="solarNoon" /> Use Solar Noon</label>
+          <label>Design Time Basis</label>
+          <div style="display:flex;flex-direction:column;gap:0.55rem;padding:0.3rem 0;">
+            <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.92rem;font-weight:400;cursor:pointer;">
+              <input type="radio" name="time_mode" value="window" checked>
+              Design window edge:
+              <input type="number" id="window_hours" value="3" min="0.5" max="6" step="0.5"
+                style="width:52px;padding:0.25rem 0.4rem;border:1px solid #c5cdd8;border-radius:4px;font-size:0.9rem;" />
+              hr from solar noon
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.92rem;font-weight:400;cursor:pointer;">
+              <input type="radio" name="time_mode" value="solar">
+              Solar noon <span style="color:#888;font-size:0.82rem;">(shortest shadows — most optimistic)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.92rem;font-weight:400;cursor:pointer;">
+              <input type="radio" name="time_mode" value="specific">
+              Specific time:
+              <input type="time" id="time" value="09:00"
+                style="padding:0.25rem 0.4rem;border:1px solid #c5cdd8;border-radius:4px;font-size:0.9rem;" />
+            </label>
           </div>
-          <span class="field-hint">Solar noon gives the shortest shadow of the day. Use a specific time to check morning or afternoon conditions.</span>
+          <span class="field-hint">
+            <strong>Design window edge</strong> is the recommended basis: Dec 21 at ±N hours
+            from solar noon gives the lowest sun angle within your target generation window.
+            Solar irradiance is modest that far from noon anyway, so accepting some shading
+            there costs little annual yield while allowing much denser row spacing.
+          </span>
         </div>
       </div>
     </div>
@@ -684,6 +703,17 @@
         r.addEventListener("change", updateDerivedDisplay)
       );
 
+      // ── Time value helper ─────────────────────────────────────────────────
+      function getTimeValue() {
+        const mode = document.querySelector('input[name="time_mode"]:checked').value;
+        if (mode === "solar")  return "solar";
+        if (mode === "window") {
+          const hrs = parseFloat(document.getElementById("window_hours").value) || 3;
+          return `window:${hrs}`;
+        }
+        return document.getElementById("time").value;
+      }
+
       // ── Tilt recommendation from latitude + azimuth ──────────────────────
       function updateTiltRecommendation() {
         const lat = parseFloat(document.getElementById("latitude").value);
@@ -737,8 +767,7 @@
           }
         }
 
-        const time = document.getElementById("solarNoon").checked
-          ? "solar" : document.getElementById("time").value;
+        const time = getTimeValue();
 
         const payload = {
           latitude:     document.getElementById("latitude").value,

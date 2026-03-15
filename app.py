@@ -20,18 +20,28 @@ def get_solar_elevation(latitude, longitude, user_tz_string, time_string):
         latitude=latitude, longitude=longitude, tz=user_tz_string
     )
 
+    # Find solar noon regardless of mode (needed for "window" and "solar")
+    day_times = pd.date_range(
+        start=tz.localize(datetime(year, 12, 21, 0, 0, 0)),
+        end=tz.localize(datetime(year, 12, 22, 0, 0, 0)),
+        freq="1min",
+        tz=tz,
+    )
+    day_sp   = location.get_solarposition(day_times)
+    noon_idx = day_sp["elevation"].idxmax()
+    noon_t   = noon_idx.to_pydatetime()
+
     if time_string.lower() == "solar":
-        times = pd.date_range(
-            start=tz.localize(datetime(year, 12, 21, 0, 0, 0)),
-            end=tz.localize(datetime(year, 12, 22, 0, 0, 0)),
-            freq="1min",
-            tz=tz,
-        )
-        sp = location.get_solarposition(times)
-        idx = sp["elevation"].idxmax()
-        t = idx.to_pydatetime()
-        elev = float(sp.loc[idx, "elevation"])
-        az   = float(sp.loc[idx, "azimuth"])
+        t    = noon_t
+        elev = float(day_sp.loc[noon_idx, "elevation"])
+        az   = float(day_sp.loc[noon_idx, "azimuth"])
+    elif time_string.lower().startswith("window:"):
+        from datetime import timedelta
+        hours_offset = float(time_string.split(":")[1])
+        t  = noon_t - timedelta(hours=hours_offset)
+        sp = location.get_solarposition([t])
+        elev = float(sp["elevation"].iloc[0])
+        az   = float(sp["azimuth"].iloc[0])
     else:
         hour, minute = map(int, time_string.split(":"))
         t = tz.localize(datetime(year, 12, 21, hour, minute))
