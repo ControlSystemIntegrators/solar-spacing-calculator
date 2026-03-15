@@ -404,8 +404,12 @@
           <span class="derived-value" id="derived_width">—</span>
         </div>
         <div class="derived-item">
-          <span class="derived-label">Panel across-row dim (for land calc)</span>
+          <span class="derived-label">Panel across-row dim (land calc)</span>
           <span class="derived-value" id="derived_across">—</span>
+        </div>
+        <div class="derived-item">
+          <span class="derived-label">Bottom panel shading at current %</span>
+          <span class="derived-value" id="derived_bottom_shade">—</span>
         </div>
       </div>
 
@@ -419,15 +423,32 @@
         <div class="field-group">
           <label for="azimuth">Array Azimuth (° from North)</label>
           <input type="number" step="any" id="azimuth" value="180" required />
-          <span class="field-hint">180° = facing South (typical in Northern Hemisphere)</span>
+          <span class="field-hint">
+            180° = facing South (typical in Northern Hemisphere).
+            As azimuth deviates from due-south, optimal tilt decreases — roughly 5° per 15° of
+            azimuth offset (e.g. SW/SE → reduce tilt ~5°; East/West → 10–15° tilt is typical).
+            The spacing formula conservatively assumes a south-facing array; off-south azimuths
+            cast diagonal shadows that are less likely to hit the next row directly.
+          </span>
         </div>
       </div>
 
       <div class="field-row">
-        <div class="field-group" style="max-width:280px;">
-          <label for="shading">Allowable Shading on Rear Panel</label>
-          <input type="number" id="shading" value="25" step="5" min="0" max="100" /> %
-          <span class="field-hint">0% = no shading ever. 25% is a common design tolerance.</span>
+        <div class="field-group" style="max-width:360px;">
+          <label for="shading">Allowable Shading — % of total slope height</label>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <input type="number" id="shading" value="25" step="5" min="0" max="100" style="width:80px;" />
+            <span>%</span>
+            <button type="button" id="btnFullBottomRow"
+              style="font-size:0.82rem;padding:0.3rem 0.7rem;border:1px solid #888;border-radius:4px;background:#f5f7fa;cursor:pointer;white-space:nowrap;">
+              Set to full bottom row
+            </button>
+          </div>
+          <span class="field-hint">
+            For a single panel: % of that panel's height. For multi-row arrays: % of total
+            slope length — the derived display above shows how much of the bottom panel row
+            this shades. "Full bottom row" sets shading to exactly one panel's worth of slope.
+          </span>
         </div>
       </div>
     </div>
@@ -453,6 +474,77 @@
       Enter your cost inputs below. The calculator will sweep shading tolerance from 0% to
       the point before a second full bypass section is lost, and show the
       <strong>cost per effective kWp</strong> at every step.
+    </p>
+
+    <!-- ── Bypass section diagrams ── -->
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+
+      <!-- 3-section panel (most common) -->
+      <div style="flex:1;min-width:220px;">
+        <p style="margin:0 0 0.4rem;font-size:0.85rem;font-weight:600;color:#333;">
+          3-section panel &mdash; common 60/72-cell modules
+        </p>
+        <svg viewBox="0 0 260 140" style="width:100%;max-width:300px;display:block;">
+          <!-- panel body -->
+          <rect x="8" y="8" width="244" height="90" fill="#e8eef8" stroke="#445" stroke-width="2" rx="4"/>
+          <!-- section dividers at 1/3 and 2/3 of height from bottom (bottom=98, top=8, h=90) -->
+          <!-- 2/3 from bottom = y=98-60=38; 1/3 from bottom = y=98-30=68 -->
+          <line x1="8" y1="38" x2="252" y2="38" stroke="#667" stroke-width="1.2" stroke-dasharray="5,3"/>
+          <line x1="8" y1="68" x2="252" y2="68" stroke="#667" stroke-width="1.2" stroke-dasharray="5,3"/>
+          <!-- shadow zone (bottom 1/3) -->
+          <rect x="8" y="68" width="244" height="30" fill="#5588bb" opacity="0.38" rx="0"/>
+          <!-- section labels -->
+          <text x="130" y="27" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#445">Section 1</text>
+          <text x="130" y="56" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#445">Section 2</text>
+          <text x="130" y="87" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" fill="#fff">Section 3 — shaded (&gt;0%)</text>
+          <!-- shadow source indicator -->
+          <text x="130" y="110" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#888">&#9650; shadow from front row</text>
+          <!-- bracket showing 1/3 -->
+          <line x1="256" y1="68" x2="256" y2="98" stroke="#b00" stroke-width="1.5"/>
+          <text x="258" y="86" font-family="Arial,sans-serif" font-size="9" fill="#b00">1/3</text>
+          <!-- annotation -->
+          <text x="130" y="128" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#555">1 section lost = 33% power loss per panel</text>
+        </svg>
+      </div>
+
+      <!-- 6-section panel (half-cut) -->
+      <div style="flex:1;min-width:220px;">
+        <p style="margin:0 0 0.4rem;font-size:0.85rem;font-weight:600;color:#333;">
+          6-section panel &mdash; half-cut cell modules
+        </p>
+        <svg viewBox="0 0 260 140" style="width:100%;max-width:300px;display:block;">
+          <!-- panel body -->
+          <rect x="8" y="8" width="244" height="90" fill="#e8eef8" stroke="#445" stroke-width="2" rx="4"/>
+          <!-- section dividers: each band = 15px high (90/6) from top: 8,23,38,53,68,83,98 -->
+          <line x1="8" y1="23" x2="252" y2="23" stroke="#667" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="8" y1="38" x2="252" y2="38" stroke="#667" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="8" y1="53" x2="252" y2="53" stroke="#667" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="8" y1="68" x2="252" y2="68" stroke="#667" stroke-width="1" stroke-dasharray="4,3"/>
+          <line x1="8" y1="83" x2="252" y2="83" stroke="#667" stroke-width="1" stroke-dasharray="4,3"/>
+          <!-- shadow zone (bottom 1/6) -->
+          <rect x="8" y="83" width="244" height="15" fill="#5588bb" opacity="0.38"/>
+          <!-- section labels -->
+          <text x="130" y="18"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#445">1</text>
+          <text x="130" y="33"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#445">2</text>
+          <text x="130" y="48"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#445">3</text>
+          <text x="130" y="63"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#445">4</text>
+          <text x="130" y="78"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#445">5</text>
+          <text x="130" y="93"  text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#fff">6 — shaded (&gt;0%)</text>
+          <!-- shadow source indicator -->
+          <text x="130" y="110" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#888">&#9650; shadow from front row</text>
+          <!-- bracket showing 1/6 -->
+          <line x1="256" y1="83" x2="256" y2="98" stroke="#b00" stroke-width="1.5"/>
+          <text x="258" y="93" font-family="Arial,sans-serif" font-size="9" fill="#b00">1/6</text>
+          <!-- annotation -->
+          <text x="130" y="128" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" fill="#555">1 section lost = 17% power loss per panel</text>
+        </svg>
+      </div>
+    </div>
+    <p style="font-size:0.83rem;color:#666;margin:0 0 1rem;">
+      Diagrams show panels mounted <strong>landscape</strong> (wide side horizontal).
+      Each horizontal band is one bypass section — shade any cell in a band and the whole
+      band's diode trips. Within a band, extra shading costs nothing more. Select your
+      panel's bypass count in the field below.
     </p>
 
     <div class="field-row">
@@ -556,6 +648,13 @@
         document.getElementById("derived_across").textContent = d ? fmt(d.acrossM)       : "—";
         // Auto-populate Step 3 panel width
         if (d) document.getElementById("panel_width").value = d.acrossM.toFixed(4);
+
+        // Bottom-panel shading % = total slope % × array_rows (capped at 100%)
+        const rows  = parseInt(document.getElementById("array_rows").value) || 1;
+        const shPct = parseFloat(document.getElementById("shading").value) || 0;
+        const bottomPct = Math.min(100, shPct * rows);
+        document.getElementById("derived_bottom_shade").textContent =
+          d ? bottomPct.toFixed(1) + "% of bottom panel" : "—";
       }
 
       // Update unit labels on radio change
@@ -568,12 +667,19 @@
       );
 
       // Recalculate whenever any dimension input changes
-      ["panel_dim_w","panel_dim_h","array_cols","array_rows"].forEach(id =>
+      ["panel_dim_w","panel_dim_h","array_cols","array_rows","shading"].forEach(id =>
         document.getElementById(id).addEventListener("input", updateDerivedDisplay)
       );
       document.querySelectorAll('input[name="orientation"]').forEach(r =>
         r.addEventListener("change", updateDerivedDisplay)
       );
+
+      // ── Full bottom row button ────────────────────────────────────────────
+      document.getElementById("btnFullBottomRow").addEventListener("click", () => {
+        const rows = parseInt(document.getElementById("array_rows").value) || 1;
+        document.getElementById("shading").value = Math.round(100 / rows);
+        updateDerivedDisplay();
+      });
 
       // ── Optimise button ───────────────────────────────────────────────────
       document.getElementById("btnOptimize").addEventListener("click", async () => {
@@ -605,6 +711,7 @@
           panel_cost:   document.getElementById("panel_cost").value,
           land_cost_m2: document.getElementById("land_cost_m2").value,
           n_bypass:     document.getElementById("n_bypass").value,
+          array_rows:   parseInt(document.getElementById("array_rows").value) || 1,
         };
 
         document.getElementById("opt-result").innerHTML =
@@ -659,6 +766,7 @@
           const optMark   = isOpt ? " ★" : "";
           return `<tr class="${cls}">
             <td>${r.shading_pct}%${optMark}</td>
+            <td>${r.slope_shading_pct}%</td>
             <td>${r.back_to_front} m</td>
             <td>${r.front_to_front} m</td>
             <td>${r.land_area_m2} m²</td>
@@ -700,12 +808,13 @@
             <div class="opt-table-wrap">
               <table class="opt-table">
                 <thead><tr>
-                  <th>Shading %</th>
+                  <th>Bottom Panel %</th>
+                  <th>Slope %</th>
                   <th>Back-to-Front</th>
                   <th>Row Pitch</th>
                   <th>Land / Panel</th>
                   <th>Bypass Sections</th>
-                  <th>Power Loss</th>
+                  <th>Array Loss</th>
                   <th>Effective W</th>
                   <th>Land Cost</th>
                   <th>Total Cost</th>
@@ -748,6 +857,7 @@
           shading:      parseFloat(document.getElementById("shading").value) / 100,
           time:         time,
           timezone:     document.getElementById("timezone").value,
+          array_rows:   parseInt(document.getElementById("array_rows").value) || 1,
         };
 
         const resp = await fetch("/calculate", {
