@@ -138,89 +138,124 @@ def calculate():
 @app.route("/optimize", methods=["POST"])
 def optimize():
     """
-    Sweeps bottom-panel shading tolerance from 0% to (n_bypass-1)/n_bypass × 100%
-    and returns a cost-per-effective-kWp table.
+    2-D sweep: n_rows (1–max_rows) × bottom-panel shading tolerance (0 to (n-1)/n).
 
-    The sweep variable is the fraction of the BOTTOM PANEL's height that is shaded.
-    This maps directly to bypass diode physics regardless of array row count.
-    Total slope shading fraction = bottom_panel_shading / array_rows.
+    Cost model:
+      hardware_per_panel = panel_cost
+                         + rail_cost_per_row                (incremental rail per row)
+                         + foundation_cost_per_col / n_rows (pile cost amortised)
+      land_per_panel     = f2f × panel_width / n_rows       (constant with n_rows at 0 shading)
+      total_per_panel    = hardware + land
 
-    Land cost is computed per individual panel:
-      land_area_per_panel = front_to_front × one_panel_width / array_rows
+    Power loss is bottom-row only (assumes bottom row on separate MPPT):
+      array_loss = bypass_loss(bottom_panel_frac) / n_rows
 
-    Power loss per panel is the average across the array:
-      array_loss = bypass_loss(bottom_panel_frac) / array_rows
-    (only the bottom row is shaded; upper rows are unaffected)
+    Returns a summary (best shading tolerance per row count) and detail rows for
+    the globally optimal n_rows.
     """
     try:
-        data         = request.get_json(force=True)
-        latitude     = float(data["latitude"])
-        longitude    = float(data["longitude"])
-        panel_length = float(data["panel_length"])   # total slope length (all rows)
-        tilt         = float(data["tilt"])
-        time_string  = data["time"]
-        tz_string    = data["timezone"]
-        panel_wp     = float(data["panel_wp"])
-        panel_cost   = float(data["panel_cost"])
-        panel_width  = float(data["panel_width"])    # single panel's across-row width
-        land_cost_m2 = float(data["land_cost_m2"])
-        n_bypass     = int(data.get("n_bypass", 3))
-        array_rows   = int(data.get("array_rows", 1))
+        data                  = request.get_json(force=True)
+        latitude              = float(data["latitude"])
+        longitude             = float(data["longitude"])
+        panel_slope_m         = float(data["panel_slope_m"])        # single-panel slope dim
+        tilt                  = float(data["tilt"])
+        time_string           = data["time"]
+        tz_string             = data["timezone"]
+        panel_wp              = float(data["panel_wp"])
+        panel_cost            = float(data["panel_cost"])            # hardware only, per panel
+        foundation_cost_col   = float(data["foundation_cost_per_col"])  # per pile position
+        rail_cost_per_row     = float(data["rail_cost_per_row"])     # incremental rail per row
+        panel_width           = float(data["panel_width"])           # across-row, single panel
+        land_cost_m2          = float(data["land_cost_m2"])
+        n_bypass              = int(data.get("n_bypass", 3))
+        max_rows              = int(data.get("max_rows", 6))
 
         elev, az, ts = get_solar_elevation(latitude, longitude, tz_string, time_string)
 
-        rows = []
-        # Sweep bottom-panel shading from 0% to just below all sections being bypassed
         max_bottom_pct = int(((n_bypass - 1) / n_bypass) * 100)
+        zone_starts    = [int(i / n_bypass * 100) for i in range(n_bypass)]
 
-        for bottom_pct in range(0, max_bottom_pct + 1):
-            bottom_sf = bottom_pct / 100.0
-            # Fraction of TOTAL slope height in shadow
-            sf = bottom_sf / array_rows
+        summary = []          # best result per n_rows
+        best_detail = []      # full shading sweep for the globally optimal n_rows
+        global_best = None
 
-            b2f, f2f = spacing_for_shading(sf, panel_length, tilt, elev)
+        for n_rows in range(1, max_rows + 1):
+            slope_length         = panel_slope_m * n_rows
+            hardware_per_panel   = (panel_cost
+                                    + rail_cost_per_row
+                                    + foundation_cost_col / n_rows)
 
-            # Land cost per individual panel (f2f spans all rows, divide by array_rows)
-            land_area     = f2f * panel_width / array_rows
-            land_cost_pan = land_area * land_cost_m2
-            total_cost    = panel_cost + land_cost_pan
+            best_for_n = None
+            sweep      = []
 
-            # Bypass loss for the bottom panel; average that loss across the full array
-            panel_loss_frac  = bypass_loss(bottom_sf, n_bypass)
-            array_loss_frac  = panel_loss_frac / array_rows
-            sections_lost    = ceil(bottom_sf * n_bypass) if bottom_sf > 0 else 0
+            for bottom_pct in range(0, max_bottom_pct + 1):
+                bottom_sf = bottom_pct / 100.0
+                sf        = bottom_sf / n_rows     # fraction of total slope
 
-            effective_w  = panel_wp * (1.0 - array_loss_frac)
-            cost_per_kwp = (total_cost / (effective_w / 1000)) if effective_w > 0 else None
+                b2f, f2f = spacing_for_shading(sf, slope_length, tilt, elev)
 
-            rows.append({
-                "shading_pct":           bottom_pct,             # bottom panel %
-                "slope_shading_pct":     round(sf * 100, 1),     # total slope %
-                "back_to_front":         round(b2f, 2),
-                "front_to_front":        round(f2f, 2),
-                "land_area_m2":          round(land_area, 2),
-                "land_cost":             round(land_cost_pan, 2),
-                "total_cost":            round(total_cost, 2),
-                "sections_lost":         sections_lost,
-                "power_loss_pct":        round(array_loss_frac * 100, 1),
-                "bottom_panel_loss_pct": round(panel_loss_frac * 100, 1),
-                "effective_w":           round(effective_w, 1),
-                "cost_per_kwp":          round(cost_per_kwp, 0) if cost_per_kwp else None,
-            })
+                land_area     = f2f * panel_width / n_rows
+                land_cost_pan = land_area * land_cost_m2
+                total_cost    = hardware_per_panel + land_cost_pan
 
-        valid   = [r for r in rows if r["cost_per_kwp"] is not None]
-        optimal = min(valid, key=lambda r: r["cost_per_kwp"]) if valid else None
+                panel_loss_frac = bypass_loss(bottom_sf, n_bypass)
+                array_loss_frac = panel_loss_frac / n_rows
+                sections_lost   = ceil(bottom_sf * n_bypass) if bottom_sf > 0 else 0
 
-        # Zone boundaries are in bottom-panel % (0, 33, 66 for n_bypass=3)
-        zone_starts = [int(i / n_bypass * 100) for i in range(n_bypass)]
+                effective_w  = panel_wp * (1.0 - array_loss_frac)
+                cost_per_kwp = (total_cost / (effective_w / 1000)) if effective_w > 0 else None
+
+                row = {
+                    "shading_pct":       bottom_pct,
+                    "slope_shading_pct": round(sf * 100, 1),
+                    "back_to_front":     round(b2f, 2),
+                    "front_to_front":    round(f2f, 2),
+                    "land_area_m2":      round(land_area, 2),
+                    "hardware_cost":     round(hardware_per_panel, 2),
+                    "land_cost":         round(land_cost_pan, 2),
+                    "total_cost":        round(total_cost, 2),
+                    "sections_lost":     sections_lost,
+                    "power_loss_pct":    round(array_loss_frac * 100, 1),
+                    "effective_w":       round(effective_w, 1),
+                    "cost_per_kwp":      round(cost_per_kwp, 0) if cost_per_kwp else None,
+                }
+                sweep.append(row)
+
+                if cost_per_kwp and (best_for_n is None
+                                     or cost_per_kwp < best_for_n["cost_per_kwp"]):
+                    best_for_n = row
+
+            if best_for_n:
+                summary.append({
+                    "n_rows":              n_rows,
+                    "hardware_per_panel":  round(hardware_per_panel, 2),
+                    "optimal_shading_pct": best_for_n["shading_pct"],
+                    "front_to_front":      best_for_n["front_to_front"],
+                    "land_cost":           best_for_n["land_cost"],
+                    "total_cost":          best_for_n["total_cost"],
+                    "power_loss_pct":      best_for_n["power_loss_pct"],
+                    "effective_w":         best_for_n["effective_w"],
+                    "cost_per_kwp":        best_for_n["cost_per_kwp"],
+                })
+                if global_best is None or best_for_n["cost_per_kwp"] < global_best["cost_per_kwp"]:
+                    global_best    = best_for_n
+                    global_best_n  = n_rows
+                    best_detail    = sweep   # keep the full sweep for this n_rows
+
+        # Filter detail to every-5% + zone boundaries + optimal row (keeps payload lean)
+        important = {global_best["shading_pct"]} | set(zone_starts) | {z+1 for z in zone_starts}
+        detail_filtered = [r for r in best_detail
+                           if r["shading_pct"] % 5 == 0
+                           or r["shading_pct"] in important]
 
         return jsonify({
             "timestamp":       ts,
             "solar_elevation": round(elev, 2),
-            "rows":            rows,
-            "optimal_pct":     optimal["shading_pct"] if optimal else None,
+            "summary":         summary,
+            "detail":          detail_filtered,
+            "global_opt_rows": global_best_n if global_best else None,
+            "global_opt_pct":  global_best["shading_pct"] if global_best else None,
             "n_bypass":        n_bypass,
-            "array_rows":      array_rows,
             "zone_starts":     zone_starts,
         }), 200
 
