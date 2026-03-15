@@ -117,7 +117,7 @@
     .time-row label { font-size: 0.88rem; font-weight: 600; color: #333; display: flex; align-items: center; gap: 0.4rem; }
     .or-divider { color: #aaa; font-size: 0.85rem; }
 
-    /* Calculate button */
+    /* Buttons */
     .btn-calc {
       background: #1a73e8;
       color: #fff;
@@ -130,6 +130,74 @@
       margin-top: 0.5rem;
     }
     .btn-calc:hover { background: #1558b0; }
+    .btn-optimize {
+      background: #188038;
+      color: #fff;
+      border: none;
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    .btn-optimize:hover { background: #0f5a28; }
+
+    /* Optimization table */
+    .opt-table-wrap { overflow-x: auto; margin-top: 1rem; }
+    .opt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .opt-table th {
+      background: #f0f4fa;
+      padding: 0.5rem 0.6rem;
+      text-align: right;
+      border-bottom: 2px solid #dde3ed;
+      white-space: nowrap;
+    }
+    .opt-table th:first-child { text-align: center; }
+    .opt-table td {
+      padding: 0.4rem 0.6rem;
+      text-align: right;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .opt-table td:first-child { text-align: center; font-weight: 600; }
+    .opt-table tr.zone-0 td { background: #f9fff9; }
+    .opt-table tr.zone-1 td { background: #fffdf0; }
+    .opt-table tr.zone-2 td { background: #fff5f5; }
+    .opt-table tr.optimal td {
+      background: #e6f4ea !important;
+      font-weight: 700;
+    }
+    .opt-table tr.zone-start td {
+      border-top: 2px solid #888;
+    }
+    .zone-legend {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+      font-size: 0.82rem;
+      color: #555;
+    }
+    .zone-swatch {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .opt-insight {
+      background: #e8f5e9;
+      border-left: 4px solid #188038;
+      padding: 0.75rem 1rem;
+      border-radius: 0 6px 6px 0;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
 
     /* Result */
     #result {
@@ -284,6 +352,68 @@
 
   <div id="result"></div>
 
+  <!-- ── Step 3: Land Use Optimisation ─────────────────────────────────────── -->
+  <div class="step" style="max-width:740px; margin-top: 1.5rem;">
+    <div class="step-header">
+      <div class="step-number" style="background:#188038;">3</div>
+      <h2 class="step-title">Land Use Optimisation <span style="font-size:0.85rem;font-weight:400;color:#666;">(optional)</span></h2>
+    </div>
+    <p class="step-desc">
+      Tighter row spacing means more panels fit on a given area — but once any shadow reaches a
+      panel, a <strong>bypass diode</strong> activates and an entire section of that panel drops
+      to zero output. Because bypass diodes protect equal-height bands, there is
+      <strong>no extra power penalty</strong> for increasing shading within a band once that diode
+      has already tripped. This creates spacing "sweet spots" worth finding.
+      <br><br>
+      Enter your cost inputs below. The calculator will sweep shading tolerance from 0% to
+      the point before a second full bypass section is lost, and show the
+      <strong>cost per effective kWp</strong> at every step.
+    </p>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label for="panel_wp">Panel Rated Power (Wp)</label>
+        <input type="number" step="1" id="panel_wp" placeholder="e.g. 400" />
+        <span class="field-hint">Nameplate watts per panel</span>
+      </div>
+      <div class="field-group">
+        <label for="panel_width">Panel Width (m)</label>
+        <input type="number" step="any" id="panel_width" placeholder="e.g. 1.05" />
+        <span class="field-hint">Width perpendicular to the rows (portrait = shorter dimension)</span>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label for="panel_cost">Panel Cost ($ per panel)</label>
+        <input type="number" step="any" id="panel_cost" placeholder="e.g. 200" />
+        <span class="field-hint">Installed cost per panel including mounting hardware</span>
+      </div>
+      <div class="field-group">
+        <label for="land_cost_m2">Land Cost ($ per m²)</label>
+        <input type="number" step="any" id="land_cost_m2" placeholder="e.g. 5.00" />
+        <span class="field-hint">1 acre = 4,047 m² &nbsp;|&nbsp; 1 hectare = 10,000 m²</span>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group" style="max-width: 220px;">
+        <label for="n_bypass">Bypass Diode Sections per Panel</label>
+        <select id="n_bypass">
+          <option value="3" selected>3 &nbsp;(most 60- and 72-cell panels)</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6">6 &nbsp;(half-cut cell panels)</option>
+        </select>
+        <span class="field-hint">Check your panel datasheet; 3 is the most common</span>
+      </div>
+    </div>
+
+    <button type="button" class="btn-optimize" id="btnOptimize">Optimise Land Use</button>
+  </div>
+
+  <div id="opt-result" style="max-width:740px;"></div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
 
@@ -305,6 +435,154 @@
         marker = L.marker([lat, lng]).addTo(map);
       });
 
+      // ── Optimise button ───────────────────────────────────────────────────
+      document.getElementById("btnOptimize").addEventListener("click", async () => {
+        const required = ["latitude","longitude","panel_length","tilt","azimuth",
+                          "panel_wp","panel_width","panel_cost","land_cost_m2"];
+        for (const id of required) {
+          if (!document.getElementById(id).value) {
+            alert(`Please fill in "${document.getElementById(id).closest(".field-group")?.querySelector("label")?.textContent?.trim() || id}" before optimising.`);
+            return;
+          }
+        }
+
+        const time = document.getElementById("solarNoon").checked
+          ? "solar" : document.getElementById("time").value;
+
+        const payload = {
+          latitude:     document.getElementById("latitude").value,
+          longitude:    document.getElementById("longitude").value,
+          panel_length: document.getElementById("panel_length").value,
+          tilt:         document.getElementById("tilt").value,
+          azimuth:      document.getElementById("azimuth").value,
+          time,
+          timezone:     document.getElementById("timezone").value,
+          panel_wp:     document.getElementById("panel_wp").value,
+          panel_width:  document.getElementById("panel_width").value,
+          panel_cost:   document.getElementById("panel_cost").value,
+          land_cost_m2: document.getElementById("land_cost_m2").value,
+          n_bypass:     document.getElementById("n_bypass").value,
+        };
+
+        document.getElementById("opt-result").innerHTML =
+          `<div class="result-card"><p style="color:#555">Calculating…</p></div>`;
+
+        const resp = await fetch("/optimize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          document.getElementById("opt-result").innerHTML =
+            `<div class="result-card"><p class="error-msg">&#9888; ${data.error}</p></div>`;
+          return;
+        }
+
+        const n      = data.n_bypass;
+        const optPct = data.optimal_pct;
+        const zones  = data.zone_starts;   // e.g. [0, 33, 66] for n=3
+
+        // Zone colour index for a given shading %
+        const zoneOf = pct => zones.filter(z => pct >= z).length - 1;
+
+        // Only show every 5th row to keep the table manageable, but always
+        // include zone boundary rows and the optimal row
+        const important = new Set([
+          optPct,
+          ...zones,
+          ...zones.map(z => z + 1),   // row just after each boundary
+        ]);
+        const display = data.rows.filter(r =>
+          r.shading_pct % 5 === 0 || important.has(r.shading_pct)
+        );
+
+        const zoneColors  = ["#f9fff9","#fffdf0","#fff5f5","#f5f0ff"];
+        const zoneLabels  = ["Zone 0 — no bypass sections active (full panel power)",
+                             "Zone 1 — 1 bypass section active (⅓ power loss)",
+                             "Zone 2 — 2 bypass sections active (⅔ power loss)",
+                             "Zone 3 — 3 bypass sections active"];
+
+        let rows = display.map(r => {
+          const z         = zoneOf(r.shading_pct);
+          const isOpt     = r.shading_pct === optPct;
+          const isZoneSt  = zones.includes(r.shading_pct) && r.shading_pct > 0;
+          const cls       = [
+            `zone-${z}`,
+            isOpt     ? "optimal"    : "",
+            isZoneSt  ? "zone-start" : "",
+          ].filter(Boolean).join(" ");
+          const optMark   = isOpt ? " ★" : "";
+          return `<tr class="${cls}">
+            <td>${r.shading_pct}%${optMark}</td>
+            <td>${r.back_to_front} m</td>
+            <td>${r.front_to_front} m</td>
+            <td>${r.land_area_m2} m²</td>
+            <td>${r.sections_lost} / ${n}</td>
+            <td>${r.power_loss_pct}%</td>
+            <td>${r.effective_w} W</td>
+            <td>$${r.land_cost}</td>
+            <td>$${r.total_cost}</td>
+            <td>${r.cost_per_kwp !== null ? "$" + r.cost_per_kwp.toLocaleString() : "—"}</td>
+          </tr>`;
+        }).join("");
+
+        const optRow = data.rows.find(r => r.shading_pct === optPct);
+        const insightZone = optPct === 0 ? 0 : zones.filter(z => optPct >= z).length - 1;
+        const insightLoss = optRow ? optRow.power_loss_pct : 0;
+        const insightPitch = optRow ? optRow.front_to_front : "?";
+
+        // Key insight: the free zone within each bypass band
+        const freeZoneEnd   = optPct === 0 ? 0 : zones[insightZone + 1] ?? optPct;
+        const freeBandWidth = freeZoneEnd - (zones[insightZone] ?? 0);
+
+        let insightText = `Optimal spacing at <strong>${optPct}% shading tolerance</strong>
+          — row pitch <strong>${insightPitch} m</strong>,
+          cost per effective kWp <strong>$${optRow?.cost_per_kwp?.toLocaleString()}</strong>.`;
+        if (insightZone > 0) {
+          insightText += ` Bypass diode zone ${insightZone} is active (${insightLoss}% power loss per rear panel).`;
+        }
+        if (freeBandWidth > 1 && insightZone < n - 1) {
+          insightText += `<br><br>&#128161; <strong>Free spacing gain:</strong> shading from
+            ${zones[insightZone]}% up to ${freeZoneEnd - 1}% incurs the same power loss
+            (${insightLoss}%). If tightening the array further is desirable,
+            you can increase shading to ${freeZoneEnd - 1}% with no additional energy penalty.`;
+        }
+
+        document.getElementById("opt-result").innerHTML = `
+          <div class="result-card">
+            <h2>Land Use Optimisation — Winter Solstice, Solar Elevation ${data.solar_elevation}°</h2>
+            <div class="opt-insight">${insightText}</div>
+            <div class="opt-table-wrap">
+              <table class="opt-table">
+                <thead><tr>
+                  <th>Shading %</th>
+                  <th>Back-to-Front</th>
+                  <th>Row Pitch</th>
+                  <th>Land / Panel</th>
+                  <th>Bypass Sections</th>
+                  <th>Power Loss</th>
+                  <th>Effective W</th>
+                  <th>Land Cost</th>
+                  <th>Total Cost</th>
+                  <th>$/eff. kWp</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+            <div class="zone-legend">
+              ${[...Array(n).keys()].map(i =>
+                `<span><span class="zone-swatch" style="background:${zoneColors[i]};border:1px solid #ccc;"></span>${zoneLabels[i]}</span>`
+              ).join("")}
+              <span><span class="zone-swatch" style="background:#e6f4ea;border:1px solid #188038;"></span>★ Optimal row</span>
+            </div>
+            <p class="result-note">★ marks the shading tolerance with the lowest combined panel + land cost per effective kWp.
+            Rows shown at every 5% plus all bypass-zone boundaries. All costs are per panel.</p>
+          </div>`;
+      });
+
+      // ── Spacing calculate button ───────────────────────────────────────────
       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
 
