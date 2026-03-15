@@ -418,17 +418,27 @@
         <div class="field-group">
           <label for="tilt">Tilt Angle (° from horizontal)</label>
           <input type="number" step="any" id="tilt" value="30" required />
+          <div id="tilt_rec" style="display:none;margin-top:0.35rem;padding:0.35rem 0.65rem;
+               background:#e8f5e9;border:1px solid #a5d6a7;border-radius:5px;
+               font-size:0.85rem;color:#1b5e20;display:flex;align-items:center;gap:0.6rem;">
+            <span id="tilt_rec_text"></span>
+            <button type="button" id="btnUseTilt"
+              style="font-size:0.8rem;padding:0.2rem 0.55rem;border:1px solid #388e3c;
+                     border-radius:4px;background:#fff;color:#1b5e20;cursor:pointer;
+                     white-space:nowrap;">
+              Use this
+            </button>
+          </div>
           <span class="field-hint">0° = flat, 90° = vertical. Typical fixed-tilt: 15°–35°</span>
         </div>
         <div class="field-group">
           <label for="azimuth">Array Azimuth (° from North)</label>
           <input type="number" step="any" id="azimuth" value="180" required />
           <span class="field-hint">
-            180° = facing South (typical in Northern Hemisphere).
-            As azimuth deviates from due-south, optimal tilt decreases — roughly 5° per 15° of
-            azimuth offset (e.g. SW/SE → reduce tilt ~5°; East/West → 10–15° tilt is typical).
-            The spacing formula conservatively assumes a south-facing array; off-south azimuths
-            cast diagonal shadows that are less likely to hit the next row directly.
+            180° = due South (Northern Hemisphere optimum). Enter the compass bearing the
+            panels face — e.g. 160° = SSE, 200° = SSW, 90° = East.
+            The spacing formula is conservative for off-south azimuths (diagonal shadows
+            are less likely to hit the next row directly).
           </span>
         </div>
       </div>
@@ -672,6 +682,38 @@
       );
       document.querySelectorAll('input[name="orientation"]').forEach(r =>
         r.addEventListener("change", updateDerivedDisplay)
+      );
+
+      // ── Tilt recommendation from latitude + azimuth ──────────────────────
+      function updateTiltRecommendation() {
+        const lat = parseFloat(document.getElementById("latitude").value);
+        const az  = parseFloat(document.getElementById("azimuth").value);
+        const rec = document.getElementById("tilt_rec");
+        if (!lat || isNaN(az)) { rec.style.display = "none"; return; }
+
+        // |azimuth - 180| capped at 90 (beyond that the array faces away from equator)
+        const dev   = Math.min(90, Math.abs(az - 180));
+        const devRad = dev * Math.PI / 180;
+        // suggested = lat × (0.5 + 0.5 × cos(deviation)), floored at 10°
+        const suggested = Math.max(10, Math.round(Math.abs(lat) * (0.5 + 0.5 * Math.cos(devRad))));
+
+        const current = parseFloat(document.getElementById("tilt").value);
+        if (Math.round(current) === suggested) { rec.style.display = "none"; return; }
+
+        document.getElementById("tilt_rec_text").textContent =
+          `Suggested tilt for ${Math.round(Math.abs(lat))}° lat, ${Math.round(az)}° azimuth: ${suggested}°`;
+        rec.style.display = "flex";
+        document.getElementById("btnUseTilt")._suggested = suggested;
+      }
+
+      document.getElementById("btnUseTilt").addEventListener("click", function () {
+        document.getElementById("tilt").value = this._suggested;
+        document.getElementById("tilt_rec").style.display = "none";
+      });
+
+      // Trigger on latitude, azimuth, or tilt change
+      ["latitude", "azimuth", "tilt"].forEach(id =>
+        document.getElementById(id).addEventListener("input", updateTiltRecommendation)
       );
 
       // ── Full bottom row button ────────────────────────────────────────────
